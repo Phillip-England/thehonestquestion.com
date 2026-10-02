@@ -27,7 +27,7 @@ Converted post images are stored in `data/uploads/`. Back up the whole `data/` d
 
 ## Uppr
 
-The Docker image includes FFmpeg and a HEIC decoder, and listens on `0.0.0.0:8818`. For local runs, install FFmpeg and ensure `ffmpeg` is on your `PATH`. For HEIC uploads locally, also install `heif-convert`. Uppr mounts `config/` at `/app/config` and `data/` at `/app/data`. The app loads `/app/config/.env` and uses `/app/data/main.sqlite` inside the container. The container runs as UID `65532`; mounted `config/.env` must be readable by that UID, and `data/` must be writable by it. Set ownership on copied deployment files before starting the container so their private `0600` modes remain effective. `schema.json` describes every supported setting.
+The Docker image includes FFmpeg and a HEIC decoder, and listens on `0.0.0.0:8818`. For local runs, install FFmpeg and ensure `ffmpeg` is on your `PATH`. For HEIC uploads locally, also install `heif-convert`. Uppr mounts `config/` at `/app/config` and `data/` at `/app/data`. The app loads `/app/config/.env` and uses `/app/data/main.sqlite` inside the container. The container runs as UID/GID `1000:1000`, matching the Uppr workspace owner; mounted `config/.env` must be readable by that UID, and `data/` must be writable by it. Keep `config/.env` private (`0600`). If you copy deployment files from another machine, ensure they belong to UID/GID `1000:1000`. HTTPS certificates are managed by the Uppr reverse proxy, which forwards HTTP to port `8818`; the application does not load a certificate. If HTTPS is unavailable, first check that the container stays running and that the proxy targets port `8818`. `schema.json` describes every supported setting.
 
 ## Tests
 
