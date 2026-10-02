@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="The Honest Question is a place to ask what you really think about faith, without pressure to have every answer.">
+  <title>{{.Title}}</title>
+  <link rel="icon" type="image/svg+xml" href="/public/img/the-honest-question-icon.svg">
+  <script src="/public/js/theme.js"></script>
+  <link rel="stylesheet" href="/public/css/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="/" aria-label="The Honest Question, home"><span class="wordmark-mark"><img src="/public/img/the-honest-question.png" alt=""></span><span>The Honest Question<span class="wordmark-dot">.</span></span></a>
+    <nav aria-label="Main navigation">
+      <a href="#about">Our heart</a>
+      <a href="#articles">Read</a>
+      <button class="theme-toggle" type="button">Dark mode</button>
+      <a class="nav-cta" href="#ask">Reach out <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-content">
+        <img class="hero-logo" src="/public/img/the-honest-question.png" alt="" width="739" height="894">
+        <div class="hero-copy">
+          <p class="eyebrow">A PLACE TO THINK HONESTLY ABOUT FAITH</p>
+          <h1 id="hero-title">The Honest<br><em>Question.</em></h1>
+          <p class="hero-intro">Bring the questions you were afraid to ask. Take your time, think for yourself, and say “I don’t know” when you need to.</p>
+          <a class="button button-dark hero-cta" href="#ask">Start a conversation <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="welcome logo-backdrop" id="about" aria-labelledby="about-title">
+      <div class="section-shell welcome-grid">
+        <div class="welcome-label"><span class="small-rule"></span><p class="eyebrow">01 / AN HONEST PLACE TO BEGIN</p></div>
+        <div class="welcome-copy"><h2 id="about-title">You can be <em>honest</em> here.</h2><p>Maybe you’re holding a question you’re afraid to ask. Maybe things that used to feel simple now feel heavy. Maybe you just need someone to listen.</p><p>The Honest Question is a place for Christians navigating fear, doubt, and the in-between. We’re here to make room for thoughtful conversation, at your pace and without pressure to arrive at a neat answer.</p><a class="inline-link" href="#ask">Tell us what’s on your mind <span aria-hidden="true">↗</span></a></div>
+      </div>
+    </section>
+
+    <section class="pause-section" aria-labelledby="pause-title"><div class="section-shell pause-grid"><div><p class="eyebrow">A GENTLE REMINDER</p><h2 id="pause-title">It’s okay to say<br><em>“I don’t know.”</em></h2></div><div class="pause-right"><span class="quote-mark" aria-hidden="true">“</span><p>You do not need to have every answer today. You can be honest about what you don’t know and take your time finding your way.</p><span class="pause-decoration" aria-hidden="true">✳</span></div></div></section>
+
+    <section class="articles-section" id="articles" aria-labelledby="articles-title">
+      <div class="section-shell">
+        <div class="section-heading"><div><p class="eyebrow">02 / WORDS FOR THE JOURNEY</p><h2 id="articles-title">A place to <em>begin.</em></h2></div><p>Thoughtful reads for the moments when you need language, perspective, or simply a little company.</p></div>
+        <div class="article-filters">
+          <form class="article-search" action="/#articles" method="get" role="search"><label for="post-search">Search posts</label>{{if .SelectedTag}}<input type="hidden" name="tag" value="{{.SelectedTag}}">{{end}}<div><input id="post-search" type="search" name="q" value="{{.Query}}" maxlength="100" placeholder="Search by word or topic"><button type="submit">Search <span aria-hidden="true">→</span></button></div></form>
+          <div class="tag-filters" aria-label="Filter posts by hashtag"><a class="tag-filter {{if not .SelectedTag}}active{{end}}" href="{{if .Query}}/?q={{.Query | urlquery}}#articles{{else}}/#articles{{end}}">All posts</a>{{range .Tags}}<a class="tag-filter {{if .Selected}}active{{end}}" href="{{.URL}}">{{.Name}}</a>{{end}}</div>
+          {{if .Filtering}}<div class="filter-result"><span>{{len .Articles}} {{if eq (len .Articles) 1}}post{{else}}posts{{end}} found</span><a href="/#articles">Clear filters</a></div>{{end}}
+        </div>
+        {{if .Articles}}<div class="article-grid">{{range .Articles}}<a class="article-card" href="/articles/{{.Slug}}"><div class="card-top"><span class="card-icon" aria-hidden="true">✳</span><span class="card-arrow" aria-hidden="true">↗</span></div>{{if .Image}}<div class="card-media"><img src="/uploads/{{.Image}}" alt="" loading="lazy"></div>{{end}}<div class="card-bottom"><p class="eyebrow">{{.Tags}} <span class="card-separator">·</span> {{.ReadTime}}</p><h3>{{.Title}}</h3><p>{{.Summary}}</p><span class="read-link">Read article <span aria-hidden="true">→</span></span></div></a>{{end}}</div>{{else}}<div class="article-empty"><h3>No posts found.</h3><p>Try another word or choose a different hashtag.</p><a class="inline-link" href="/#articles">See all posts →</a></div>{{end}}
+      </div>
+    </section>
+
+    <section class="ask-section logo-backdrop" id="ask" aria-labelledby="ask-title">
+      <div class="section-shell ask-grid">
+        <div class="ask-copy">
+          <p class="eyebrow">03 / WE’RE LISTENING</p>
+          <h2 id="ask-title">Want to speak<br><em>with someone?</em></h2>
+          <p>Faith can feel hard to talk about. Tell us what you’re going through or what you’ve been wondering. You can start anywhere.</p>
+          <div class="ask-note"><span aria-hidden="true">✳</span><p>Leave your email if you’d like someone to write back.</p></div>
+        </div>
+        <div class="form-card">
+          {{if .Sent}}<div class="form-message success" role="status"><span aria-hidden="true">✳</span><div><strong>Thank you for reaching out.</strong><p>Your note has been saved privately. If you left an email, we can write back.</p></div></div>{{end}}
+          {{if .Error}}<div class="form-message error" role="alert"><strong>We couldn’t save your note.</strong><p>{{if eq .Error "invalid"}}Please write at least 10 characters and check your email address.{{else if eq .Error "too-long"}}That note is too long. Please shorten it and try again.{{else}}Please try again later.{{end}}</p></div>{{end}}
+          <form action="/questions" method="post">
+            <div class="form-heading"><span class="eyebrow">START A CONVERSATION</span><span class="form-flower" aria-hidden="true">✳</span></div>
+            <div class="honeypot-field" aria-hidden="true"><label for="website">Your website</label><input id="website" name="website" type="text" autocomplete="off" tabindex="-1"></div>
+            <label for="name">Your name <span>(optional)</span></label>
+            <input id="name" name="name" type="text" maxlength="120" autocomplete="name" placeholder="Whatever you’d like us to call you">
+            <label for="email">Your email <span>(if you’d like a reply)</span></label>
+            <input id="email" name="email" type="email" maxlength="254" autocomplete="email" placeholder="you@example.com">
+            <label for="message">What would you like to talk about?</label>
+            <textarea id="message" name="message" minlength="10" maxlength="5000" required rows="5" placeholder="I’ve been wanting to talk about..."></textarea>
+            <button class="button button-dark form-submit" type="submit">Reach out <span aria-hidden="true">↗</span></button>
+            <p class="form-footnote">Your note is stored on this site’s server and is not posted publicly. Please avoid sharing information you would not want site administrators to read.</p>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer"><div class="section-shell footer-grid"><div><a class="wordmark" href="/" aria-label="The Honest Question, home"><span class="wordmark-mark"><img src="/public/img/the-honest-question.png" alt=""></span><span>The Honest Question<span class="wordmark-dot">.</span></span></a><p>Make room for the questions that matter.</p></div><div class="footer-links"><a href="#about">Our heart</a><a href="#articles">Articles</a><a href="#ask">Speak with someone</a></div><p class="footer-credit">Made by <a href="https://englandsoftware.com" target="_blank" rel="noopener noreferrer">England Software</a>. Like this app? Want one for yourself? <a href="https://englandsoftware.com" target="_blank" rel="noopener noreferrer">Reach out ↗</a></p></div></footer>
+</body>
+</html>
