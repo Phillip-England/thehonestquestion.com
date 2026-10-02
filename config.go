@@ -49,7 +49,7 @@ func loadSettings(path string) (settings, error) {
 	}
 	s := settings{Port: values["PORT"], AdminUsername: values["ADMIN_USERNAME"], AdminPassword: values["ADMIN_PASSWORD"], SessionSecret: values["SESSION_SECRET"]}
 	if s.Port == "" {
-		s.Port = "8080"
+		s.Port = "8818"
 	}
 	if strings.TrimSpace(s.AdminUsername) == "" || strings.TrimSpace(s.AdminPassword) == "" || len(strings.TrimSpace(s.SessionSecret)) < 32 {
 		return s, fmt.Errorf("set ADMIN_USERNAME, ADMIN_PASSWORD, and a SESSION_SECRET of at least 32 characters in %s", path)

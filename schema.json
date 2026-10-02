@@ -26,8 +26,8 @@
     },
     {
       "name": "PORT",
-      "description": "HTTP listening port. Keep 8080 for the Uppr Docker deployment.",
-      "example": "8080",
+      "description": "HTTP listening port. Defaults to 8818 for local runs and the Uppr Docker deployment.",
+      "example": "8818",
       "required": false
     }
   ]

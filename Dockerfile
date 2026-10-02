@@ -10,5 +10,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libheif-
 WORKDIR /app
 COPY --from=build /breathingroom /app/breathingroom
 USER 65532:65532
-EXPOSE 8080
+EXPOSE 8818
 CMD ["/app/breathingroom"]

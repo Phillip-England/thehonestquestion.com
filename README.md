@@ -10,10 +10,10 @@ Create `config/.env` with your own values:
 ADMIN_USERNAME=your-admin-name
 ADMIN_PASSWORD=replace-with-a-long-unique-password
 SESSION_SECRET=replace-with-a-random-secret-at-least-32-characters
-PORT=8080
+PORT=8818
 ```
 
-Run `make run` and open <http://localhost:8080/admin>. The credentials are required; the site will not start without them. Set `PORT` only if you need a different local port. The Docker image exposes port 8080, so keep that port for Uppr.
+Run `make run` and open <http://localhost:8818/admin>. The credentials are required; the site will not start without them. Set `PORT` only if you need a different local port. The Docker image exposes port 8818, so keep that port for Uppr.
 
 Write a title, hashtags such as `#faith #questions`, a summary, and a Markdown body. You can also upload an image for the post; FFmpeg converts it to a 1200 × 675 JPEG thumbnail automatically. JPG, PNG, WebP, GIF, HEIC, and other formats supported by FFmpeg work, with a 20 MB upload limit. Replace or remove the image from the editor. The preview updates while you type. Save as a draft or check **Publish this post** to make it appear on the public site. Existing articles are copied into the database on first start and can then be edited or deleted in the admin area. Readers can search posts and filter them by hashtag on the home page. Existing category labels are converted to hashtags when the database is upgraded.
 
@@ -27,7 +27,7 @@ Converted post images are stored in `data/uploads/`. Back up the whole `data/` d
 
 ## Uppr
 
-The Docker image includes FFmpeg and a HEIC decoder, and listens on `0.0.0.0:8080`. For local runs, install FFmpeg and ensure `ffmpeg` is on your `PATH`. For HEIC uploads locally, also install `heif-convert`. Uppr mounts `config/` at `/app/config` and `data/` at `/app/data`. The app loads `/app/config/.env` and uses `/app/data/main.sqlite` inside the container. The container runs as UID `65532`; mounted `config/.env` must be readable by that UID, and `data/` must be writable by it. Set ownership on copied deployment files before starting the container so their private `0600` modes remain effective. `schema.json` describes every supported setting.
+The Docker image includes FFmpeg and a HEIC decoder, and listens on `0.0.0.0:8818`. For local runs, install FFmpeg and ensure `ffmpeg` is on your `PATH`. For HEIC uploads locally, also install `heif-convert`. Uppr mounts `config/` at `/app/config` and `data/` at `/app/data`. The app loads `/app/config/.env` and uses `/app/data/main.sqlite` inside the container. The container runs as UID `65532`; mounted `config/.env` must be readable by that UID, and `data/` must be writable by it. Set ownership on copied deployment files before starting the container so their private `0600` modes remain effective. `schema.json` describes every supported setting.
 
 ## Tests
 
