@@ -44,6 +44,56 @@ func TestPagesAndAssets(t *testing.T) {
 	}
 }
 
+func TestArticleSharingMetadata(t *testing.T) {
+	s, err := newServer(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.store.close()
+	post := article{Title: `A "question" & answer`, Summary: `Room for <questions> & hope`, Markdown: "Hello", Image: strings.Repeat("a", 43) + ".jpg", Published: true}
+	slug, err := s.store.save(post, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, withImage := range []bool{true, false} {
+		if !withImage {
+			post.Image = ""
+			if _, err := s.store.save(post, slug); err != nil {
+				t.Fatal(err)
+			}
+		}
+		w := httptest.NewRecorder()
+		s.routes().ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/articles/"+slug+"?tracking=1", nil))
+		body := w.Body.String()
+		for _, want := range []string{
+			`property="og:type" content="article"`,
+			`property="og:url" content="https://thehonestquestion.com/articles/` + slug + `"`,
+			`rel="canonical" href="https://thehonestquestion.com/articles/` + slug + `"`,
+			`property="og:title" content="A &#34;question&#34; &amp; answer"`,
+			`property="og:description" content="Room for &lt;questions&gt; &amp; hope"`,
+		} {
+			if w.Code != http.StatusOK || !strings.Contains(body, want) {
+				t.Errorf("missing sharing metadata %q: status %d", want, w.Code)
+			}
+		}
+		if withImage {
+			for _, want := range []string{
+				`name="twitter:card" content="summary_large_image"`,
+				`property="og:image" content="https://thehonestquestion.com/uploads/` + post.Image + `"`,
+				`name="twitter:image" content="https://thehonestquestion.com/uploads/` + post.Image + `"`,
+				`property="og:image:width" content="1200"`,
+				`property="og:image:height" content="675"`,
+			} {
+				if !strings.Contains(body, want) {
+					t.Errorf("missing image metadata %q", want)
+				}
+			}
+		} else if strings.Contains(body, `property="og:image"`) || strings.Contains(body, `name="twitter:image"`) || !strings.Contains(body, `name="twitter:card" content="summary"`) {
+			t.Error("article without an image should use a summary card without image metadata")
+		}
+	}
+}
+
 func TestQuestionSubmission(t *testing.T) {
 	dir := t.TempDir()
 	s, err := newServer(dir)
