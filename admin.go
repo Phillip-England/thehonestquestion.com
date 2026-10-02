@@ -24,6 +24,7 @@ const loginFailureLimit = 5
 const sessionLifetime = 12 * time.Hour
 
 type adminPageData struct {
+	Success   bool
 	Title     string
 	Posts     []article
 	Post      article
@@ -110,6 +111,8 @@ func (s *server) adminRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /admin/logout", s.logout)
 	mux.HandleFunc("GET /admin", s.adminIndex)
 	mux.HandleFunc("GET /admin/messages", s.adminMessages)
+	mux.HandleFunc("GET /admin/database", s.databasePage)
+	mux.HandleFunc("POST /admin/database", s.uploadDatabase)
 	mux.HandleFunc("GET /admin/posts/new", s.newPostPage)
 	mux.HandleFunc("GET /admin/posts/{slug}", s.editPostPage)
 	mux.HandleFunc("POST /admin/posts", s.createPost)

@@ -23,6 +23,8 @@ Contact notes are visible only to signed-in admins at `/admin/messages`. The con
 
 By default, IP limits use the direct connecting address. If the app is behind a reverse proxy, set `TRUSTED_PROXY_CIDRS` to that proxy's exact IP or network, and configure it to append or replace `X-Forwarded-For`. Only trusted peers' forwarded addresses are used. Keep direct access to the app restricted to the proxy; configure edge rate limiting there too.
 
+To publish a local database, open **Database** in the admin navigation (`/admin/database`), choose your local `data/main.sqlite`, confirm replacement, and select **Validate and replace database**. Stop the local site before copying the file (if using WAL mode, checkpoint it first). Uploads are limited to 100 MB and must pass SQLite integrity checks and match all current schema objects. Replacement happens in one transaction; a failure leaves the live database unchanged. A private full backup is saved under `data/backups/before-replacement-*.sqlite` before each replacement. Uploaded posts, contact messages, contact submission counters, and metadata replace the live contents; production sessions and login failure counters remain. Published articles appear immediately, while drafts stay private. Image files are separate: upload missing thumbnails using each post's editor. Keep only the backups you need; they contain private data and are not automatically deleted.
+
 Converted post images are stored in `data/uploads/`. Back up the whole `data/` directory to preserve posts, images, and contact notes. `config/` and `data/` are ignored by Git and excluded from the Docker image.
 
 ## Uppr

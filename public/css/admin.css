@@ -7,3 +7,5 @@
 html[data-theme="dark"] .message-card,html[data-theme="dark"] .message-empty{background:#242b30;border-color:#3b454c}html[data-theme="dark"] .message-card-header{border-color:#44515a}html[data-theme="dark"] .message-card time,html[data-theme="dark"] .message-email,html[data-theme="dark"] .message-empty p,html[data-theme="dark"] .message-pages span{color:#b4bdc5}html[data-theme="dark"] .message-pages a{color:#9fc8f4}
 @media(max-width:600px){.message-card,.message-empty{padding:22px}.message-card-header{display:block}.message-card time{display:block;margin-top:10px}.admin-header nav>a[href="/admin/messages"]{display:inline}.admin-header .wordmark>span:last-child{display:none}}
 .message-email a{text-decoration:underline;text-underline-offset:3px}
+
+@media(max-width:600px){.admin-header nav>a[href="/admin/database"]{display:inline}}
