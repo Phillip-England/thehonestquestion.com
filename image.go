@@ -91,7 +91,7 @@ func (s *server) saveImage(source io.Reader, originalName string) (string, error
 }
 
 func convertThumbnail(ctx context.Context, inputPath, outputPath string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", inputPath, "-map", "0:v:0", "-frames:v", "1", "-vf", fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d,setsar=1", thumbnailWidth, thumbnailHeight, thumbnailWidth, thumbnailHeight), "-map_metadata", "-1", "-q:v", "3", "-f", "image2", outputPath)
+	cmd := exec.CommandContext(ctx, "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", inputPath, "-map", "0:v:0", "-frames:v", "1", "-vf", fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=decrease,pad=%d:%d:(ow-iw)/2:(oh-ih)/2:color=white,setsar=1", thumbnailWidth, thumbnailHeight, thumbnailWidth, thumbnailHeight), "-map_metadata", "-1", "-q:v", "3", "-f", "image2", outputPath)
 	return cmd.CombinedOutput()
 }
 
