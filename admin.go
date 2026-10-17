@@ -34,6 +34,7 @@ type adminPageData struct {
 	CSRF      string
 	LoginCSRF string
 	Messages  []contactMessage
+	Comments  []adminComment
 	Page      int
 	PrevPage  int
 	NextPage  int
@@ -112,6 +113,8 @@ func (s *server) adminRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /admin/logout", s.logout)
 	mux.HandleFunc("GET /admin", s.adminIndex)
 	mux.HandleFunc("GET /admin/messages", s.adminMessages)
+	mux.HandleFunc("GET /admin/comments", s.adminComments)
+	mux.HandleFunc("POST /admin/comments/{id}/delete", s.adminDeleteComment)
 	mux.HandleFunc("GET /admin/database", s.databasePage)
 	mux.HandleFunc("POST /admin/database", s.uploadDatabase)
 	mux.HandleFunc("GET /admin/posts/new", s.newPostPage)
@@ -330,6 +333,51 @@ func (s *server) adminMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.renderAdmin(w, "messages", adminPageData{Title: "Messages", CSRF: csrf, Messages: messages, Page: page, PrevPage: page - 1, NextPage: page + 1, HasPrev: page > 1, HasNext: hasNext})
+}
+func (s *server) adminComments(w http.ResponseWriter, r *http.Request) {
+	csrf, ok := s.requireAdmin(w, r, false)
+	if !ok {
+		return
+	}
+	page, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	if page > 10000 {
+		page = 10000
+	}
+	comments, hasNext, err := s.store.listAdminComments(page)
+	if err != nil {
+		log.Printf("list comments: %v", err)
+		http.Error(w, "Unavailable", http.StatusInternalServerError)
+		return
+	}
+	s.renderAdmin(w, "comments", adminPageData{Title: "Comments", CSRF: csrf, Comments: comments, Page: page, PrevPage: page - 1, NextPage: page + 1, HasPrev: page > 1, HasNext: hasNext})
+}
+func (s *server) adminDeleteComment(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 4096)
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form", http.StatusBadRequest)
+		return
+	}
+	if _, ok := s.requireAdmin(w, r, true); !ok {
+		return
+	}
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || id <= 0 {
+		http.NotFound(w, r)
+		return
+	}
+	if err := s.store.deleteComment(id); err != nil {
+		log.Printf("delete comment: %v", err)
+		http.Error(w, "Could not delete comment", http.StatusInternalServerError)
+		return
+	}
+	page, err := strconv.Atoi(r.PostFormValue("page"))
+	if err != nil || page < 1 || page > 10000 {
+		page = 1
+	}
+	http.Redirect(w, r, "/admin/comments?page="+strconv.Itoa(page), http.StatusSeeOther)
 }
 func (s *server) newPostPage(w http.ResponseWriter, r *http.Request) {
 	csrf, ok := s.requireAdmin(w, r, false)

@@ -64,6 +64,12 @@ func TestArticleURLsAndComments(t *testing.T) {
 	submit(ready, "192.0.2.1", false)
 	submit(ready, "192.0.2.1", false)
 	count(1)
+	form.Set("comment", strings.Repeat("x", commentMaxLength+1))
+	submit(ready, "192.0.2.2", false)
+	count(1)
+	form.Set("comment", strings.Repeat("x", commentMaxLength))
+	submit(ready, "192.0.2.2", false)
+	count(2)
 	post.Slug = "renamed-url"
 	if got, err := s.store.save(post, slug); err != nil || got != post.Slug {
 		t.Fatalf("rename: %s %v", got, err)
@@ -78,6 +84,69 @@ func TestArticleURLsAndComments(t *testing.T) {
 	s.routes().ServeHTTP(page, httptest.NewRequest(http.MethodGet, "/articles/renamed-url", nil))
 	if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), "A careful first thought") {
 		t.Fatal("comment did not follow renamed URL")
+	}
+}
+
+func TestAdminCommentsAndDeletion(t *testing.T) {
+	s, err := newServer(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.store.close()
+	s.sessionSecret = []byte("test-session-secret-at-least-32-characters")
+	sessionToken, err := randomToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	post := article{Slug: "commented-post", Title: "A thoughtful article", Tags: "#faith", Summary: "Summary", Markdown: "Body", Published: true}
+	if _, err := s.store.save(post, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.store.saveComment(post.Slug, "192.0.2.1", "A short anonymous response", time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	var id int64
+	if err := s.store.db.QueryRow(`SELECT id FROM comments WHERE post_slug=?`, post.Slug).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	path := "/admin/comments/" + strconv.FormatInt(id, 10) + "/delete"
+	request := func(method, path string, form url.Values, signedIn bool) *httptest.ResponseRecorder {
+		var body strings.Reader
+		if form != nil {
+			body = *strings.NewReader(form.Encode())
+		}
+		r := httptest.NewRequest(method, path, &body)
+		if form != nil {
+			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		}
+		if signedIn {
+			r.AddCookie(&http.Cookie{Name: "admin_session", Value: s.signedSession(sessionToken)})
+		}
+		w := httptest.NewRecorder()
+		s.routes().ServeHTTP(w, r)
+		return w
+	}
+	if w := request(http.MethodGet, "/admin/comments", nil, false); w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/admin/login" {
+		t.Fatalf("unauthenticated comments page: %d", w.Code)
+	}
+	if w := request(http.MethodPost, path, url.Values{"csrf": {"test-csrf"}}, false); w.Code != http.StatusUnauthorized {
+		t.Fatalf("unauthenticated delete: %d", w.Code)
+	}
+	if _, err := s.store.db.Exec(`INSERT INTO sessions (token_hash, csrf_token, expires_at) VALUES (?,?,?)`, tokenHash(sessionToken), "test-csrf", time.Now().Add(time.Hour).UTC().Format(time.RFC3339Nano)); err != nil {
+		t.Fatal(err)
+	}
+	page := request(http.MethodGet, "/admin/comments", nil, true)
+	if page.Code != http.StatusOK || !strings.Contains(page.Body.String(), "A short anonymous response") || !strings.Contains(page.Body.String(), "A thoughtful article") || !strings.Contains(page.Body.String(), path) || strings.Contains(page.Body.String(), "192.0.2.1") {
+		t.Fatalf("admin comments page missing expected content or leaked IP: %d", page.Code)
+	}
+	if w := request(http.MethodPost, path, url.Values{"csrf": {"wrong"}}, true); w.Code != http.StatusForbidden {
+		t.Fatalf("invalid CSRF delete: %d", w.Code)
+	}
+	if w := request(http.MethodPost, path, url.Values{"csrf": {"test-csrf"}}, true); w.Code != http.StatusSeeOther {
+		t.Fatalf("valid delete: %d", w.Code)
+	}
+	if w := request(http.MethodGet, "/articles/commented-post", nil, false); strings.Contains(w.Body.String(), "A short anonymous response") {
+		t.Fatal("deleted comment remained public")
 	}
 }
 

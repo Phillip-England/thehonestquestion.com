@@ -17,6 +17,51 @@ type comment struct {
 	CreatedAt string
 }
 
+const commentMaxLength = 500
+
+type adminComment struct {
+	ID        int64
+	PostSlug  string
+	PostTitle string
+	Body      string
+	CreatedAt string
+}
+
+const adminCommentPageSize = 50
+
+func (s *postStore) listAdminComments(page int) ([]adminComment, bool, error) {
+	rows, err := s.db.Query(`SELECT c.id, c.post_slug, p.title, c.body, c.created_at
+		FROM comments c JOIN posts p ON p.slug = c.post_slug
+		ORDER BY c.created_at DESC, c.id DESC LIMIT ? OFFSET ?`, adminCommentPageSize+1, (page-1)*adminCommentPageSize)
+	if err != nil {
+		return nil, false, err
+	}
+	defer rows.Close()
+	comments := []adminComment{}
+	for rows.Next() {
+		var c adminComment
+		var stamp int64
+		if err := rows.Scan(&c.ID, &c.PostSlug, &c.PostTitle, &c.Body, &stamp); err != nil {
+			return nil, false, err
+		}
+		c.CreatedAt = time.Unix(stamp, 0).UTC().Format("Jan 2, 2006 at 3:04 PM UTC")
+		comments = append(comments, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, err
+	}
+	hasNext := len(comments) > adminCommentPageSize
+	if hasNext {
+		comments = comments[:adminCommentPageSize]
+	}
+	return comments, hasNext, nil
+}
+
+func (s *postStore) deleteComment(id int64) error {
+	_, err := s.db.Exec(`DELETE FROM comments WHERE id=?`, id)
+	return err
+}
+
 var errCommentExists = errors.New("comment already exists for this article and IP")
 
 func (s *postStore) listComments(slug string) ([]comment, error) {
@@ -108,7 +153,7 @@ func (s *server) submitComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	body := strings.TrimSpace(r.PostFormValue("comment"))
-	if len([]rune(body)) < 10 || len([]rune(body)) > 2000 {
+	if len([]rune(body)) < 10 || len([]rune(body)) > commentMaxLength {
 		redirect("error")
 		return
 	}

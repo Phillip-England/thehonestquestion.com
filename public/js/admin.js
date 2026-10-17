@@ -33,6 +33,11 @@ if (deleteForm) {
     if (!window.confirm('Delete this post permanently?')) event.preventDefault();
   });
 }
+for (const commentForm of document.querySelectorAll('.comment-delete-form')) {
+  commentForm.addEventListener('submit', event => {
+    if (!window.confirm('Delete this comment permanently?')) event.preventDefault();
+  });
+}
 if (form) {
   const imageInput = form.querySelector('#image');
   const removeInput = form.querySelector('#remove-image');

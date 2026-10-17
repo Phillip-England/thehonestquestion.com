@@ -9,3 +9,5 @@ html[data-theme="dark"] .message-card,html[data-theme="dark"] .message-empty{bac
 .message-email a{text-decoration:underline;text-underline-offset:3px}
 
 @media(max-width:600px){.admin-header nav>a[href="/admin/database"]{display:inline}}
+.comment-article-link{font-family:var(--serif);font-size:23px;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px}.comment-delete-form{margin:0}.comment-delete-button{border:0;background:none;color:#a83d3d;font-size:12px;font-weight:700;padding:4px 0;text-decoration:underline;cursor:pointer}.comment-delete-button:hover{color:#752222}.message-card-header time{display:block;margin-top:8px}html[data-theme="dark"] .comment-delete-button{color:#f1a0a0}
+@media(max-width:600px){.admin-header{height:auto;min-height:65px;padding-top:10px;padding-bottom:10px;gap:12px}.admin-header nav{flex-wrap:wrap;justify-content:flex-end}.admin-header nav>a[href="/admin/comments"]{display:inline}.comment-article-link{font-size:20px}}
