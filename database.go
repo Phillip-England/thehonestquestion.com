@@ -163,10 +163,12 @@ func (s *postStore) replaceDatabase(ctx context.Context, path, dir string) error
 	}
 	defer tx.Rollback()
 	// Retain production sessions and login limits; never import local credentials.
-	for _, table := range []string{"posts", "contact_messages", "contact_submissions", "meta"} {
+	for _, table := range []string{"comments", "posts", "contact_messages", "contact_submissions", "meta"} {
 		if _, err = tx.ExecContext(ctx, `DELETE FROM main.`+table); err != nil {
 			return err
 		}
+	}
+	for _, table := range []string{"posts", "comments", "contact_messages", "contact_submissions", "meta"} {
 		if _, err = tx.ExecContext(ctx, `INSERT INTO main.`+table+` SELECT * FROM uploaded.`+table); err != nil {
 			return err
 		}

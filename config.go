@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -11,6 +12,7 @@ import (
 type settings struct {
 	Port, AdminUsername, AdminPassword, SessionSecret string
 	TrustedProxyCIDRs                                 []*net.IPNet
+	Email                                             emailGateway
 }
 
 func loadSettings(path string) (settings, error) {
@@ -42,12 +44,19 @@ func loadSettings(path string) (settings, error) {
 		}
 	}
 	// Environment values take precedence for local process management.
-	for _, key := range []string{"PORT", "ADMIN_USERNAME", "ADMIN_PASSWORD", "SESSION_SECRET", "TRUSTED_PROXY_CIDRS"} {
+	for _, key := range []string{"PORT", "ADMIN_USERNAME", "ADMIN_PASSWORD", "SESSION_SECRET", "TRUSTED_PROXY_CIDRS", "EGATE_HOST", "EGATE_API_KEY", "EGATE_SENDER_EMAIL", "EGATE_TO_EMAIL"} {
 		if value, ok := os.LookupEnv(key); ok {
 			values[key] = value
 		}
 	}
 	s := settings{Port: values["PORT"], AdminUsername: values["ADMIN_USERNAME"], AdminPassword: values["ADMIN_PASSWORD"], SessionSecret: values["SESSION_SECRET"]}
+	s.Email = emailGateway{Host: strings.TrimSpace(values["EGATE_HOST"]), APIKey: strings.TrimSpace(values["EGATE_API_KEY"]), Sender: strings.TrimSpace(values["EGATE_SENDER_EMAIL"]), Recipient: strings.TrimSpace(values["EGATE_TO_EMAIL"])}
+	if s.Email.Host != "" || s.Email.APIKey != "" || s.Email.Sender != "" || s.Email.Recipient != "" {
+		parsed, err := url.Parse(s.Email.Host)
+		if !s.Email.enabled() || err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") || !emailPattern.MatchString(s.Email.Sender) || !emailPattern.MatchString(s.Email.Recipient) {
+			return s, fmt.Errorf("set a valid EGATE_HOST, EGATE_API_KEY, EGATE_SENDER_EMAIL, and EGATE_TO_EMAIL together")
+		}
+	}
 	if s.Port == "" {
 		s.Port = "8818"
 	}

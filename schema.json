@@ -29,6 +29,30 @@
       "description": "HTTP listening port. Defaults to 8818 for local runs and the Uppr Docker deployment.",
       "example": "8818",
       "required": false
+    },
+    {
+      "name": "EGATE_HOST",
+      "description": "Base URL of the egate service for contact email notifications. Set with all other EGATE settings.",
+      "example": "https://egate.englandsoftware.com",
+      "required": false
+    },
+    {
+      "name": "EGATE_API_KEY",
+      "description": "Private app key registered in egate; never expose to browsers.",
+      "example": "eg_your_app_key",
+      "required": false
+    },
+    {
+      "name": "EGATE_SENDER_EMAIL",
+      "description": "Verified sender address used for contact notifications.",
+      "example": "noreply@englandsoftware.com",
+      "required": false
+    },
+    {
+      "name": "EGATE_TO_EMAIL",
+      "description": "Your inbox for contact notifications.",
+      "example": "you@example.com",
+      "required": false
     }
   ]
 }

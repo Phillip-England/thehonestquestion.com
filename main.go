@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"embed"
 	"errors"
 	"html/template"
@@ -68,15 +69,20 @@ var articles = []article{
 }
 
 type pageData struct {
-	Title       string
-	Articles    []article
-	Article     article
-	Tags        []tagFilter
-	Query       string
-	SelectedTag string
-	Filtering   bool
-	Sent        bool
-	Error       string
+	Title         string
+	Articles      []article
+	Article       article
+	Tags          []tagFilter
+	Query         string
+	SelectedTag   string
+	Filtering     bool
+	Sent          bool
+	Error         string
+	Comments      []comment
+	CommentToken  string
+	CommentSent   bool
+	CommentError  bool
+	CommentPosted bool
 }
 
 type tagFilter struct {
@@ -94,6 +100,8 @@ type server struct {
 	adminPassword     string
 	sessionSecret     []byte
 	trustedProxyCIDRs []*net.IPNet
+	commentSecret     []byte
+	email             emailGateway
 }
 
 var emailPattern = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
@@ -111,7 +119,12 @@ func newServer(dataDir string) (*server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &server{home: home, article: articlePage, dataDir: dataDir, store: store}, nil
+	secret := make([]byte, 32)
+	if _, err := rand.Read(secret); err != nil {
+		store.close()
+		return nil, err
+	}
+	return &server{home: home, article: articlePage, dataDir: dataDir, store: store, commentSecret: secret}, nil
 }
 
 func (s *server) routes() http.Handler {
@@ -121,6 +134,7 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("GET /uploads/{name}", s.serveImage)
 	mux.HandleFunc("GET /", s.homePage)
 	mux.HandleFunc("GET /articles/{slug}", s.articlePage)
+	mux.HandleFunc("POST /articles/{slug}/comments", s.submitComment)
 	mux.HandleFunc("POST /questions", s.submitQuestion)
 	s.adminRoutes(mux)
 	return mux
@@ -178,12 +192,27 @@ func (s *server) homePage(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) articlePage(w http.ResponseWriter, r *http.Request) {
 	if a, err := s.store.get(r.PathValue("slug")); err == nil && a.Published {
+		comments, err := s.store.listComments(a.Slug)
+		if err != nil {
+			http.Error(w, "Comments are temporarily unavailable", 500)
+			return
+		}
+		token, err := s.newCommentToken(a.Slug)
+		if err != nil {
+			http.Error(w, "Comments are temporarily unavailable", 500)
+			return
+		}
+		posted, err := s.store.hasComment(a.Slug, s.clientIP(r))
+		if err != nil {
+			http.Error(w, "Comments are temporarily unavailable", 500)
+			return
+		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		tagLinks := make([]tagFilter, 0, len(a.TagList))
 		for _, tag := range a.TagList {
 			tagLinks = append(tagLinks, tagFilter{Name: tag, URL: "/?" + url.Values{"tag": {tag}}.Encode() + "#articles"})
 		}
-		if err := s.article.Execute(w, pageData{Title: a.Title + " — The Honest Question", Article: a, Tags: tagLinks}); err != nil {
+		if err := s.article.Execute(w, pageData{Title: a.Title + " — The Honest Question", Article: a, Tags: tagLinks, Comments: comments, CommentToken: token, CommentSent: r.URL.Query().Get("comment") == "sent", CommentError: r.URL.Query().Get("comment") == "error", CommentPosted: posted}); err != nil {
 			log.Printf("render article: %v", err)
 		}
 		return
@@ -223,6 +252,11 @@ func (s *server) submitQuestion(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/?error=unavailable#ask", http.StatusSeeOther)
 		return
 	}
+	if s.email.enabled() {
+		if err := s.email.sendQuestion(r.Context(), q, s.clientIP(r)); err != nil {
+			log.Printf("send contact email through egate: %v", err)
+		}
+	}
 	http.Redirect(w, r, "/?sent=1#ask", http.StatusSeeOther)
 }
 
@@ -238,6 +272,7 @@ func main() {
 	defer s.store.close()
 	s.adminUsername, s.adminPassword, s.sessionSecret = settings.AdminUsername, settings.AdminPassword, []byte(settings.SessionSecret)
 	s.trustedProxyCIDRs = settings.TrustedProxyCIDRs
+	s.email = settings.Email
 	addr := "0.0.0.0:" + settings.Port
 	log.Printf("The Honest Question listening on %s", addr)
 	if err := http.ListenAndServe(addr, s.routes()); err != nil && !errors.Is(err, http.ErrServerClosed) {

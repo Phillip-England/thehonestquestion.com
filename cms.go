@@ -22,6 +22,8 @@ type postStore struct{ db *sql.DB }
 
 var markdown = goldmark.New(goldmark.WithExtensions(extension.GFM))
 var slugCharacters = regexp.MustCompile(`[^a-z0-9]+`)
+var validSlug = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+var errSlugTaken = errors.New("article URL is already in use")
 
 func openPostStore(path string) (*postStore, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
@@ -48,6 +50,10 @@ func openPostStore(path string) (*postStore, error) {
 		db.Close()
 		return nil, err
 	}
+	if _, err = db.Exec(`PRAGMA foreign_keys=ON`); err != nil {
+		db.Close()
+		return nil, err
+	}
 	if _, err = db.Exec(`CREATE TABLE IF NOT EXISTS posts (
   slug TEXT PRIMARY KEY, title TEXT NOT NULL, tags TEXT NOT NULL,
   summary TEXT NOT NULL, markdown TEXT NOT NULL, read_time TEXT NOT NULL, image TEXT NOT NULL DEFAULT '', published INTEGER NOT NULL DEFAULT 0,
@@ -64,6 +70,10 @@ func openPostStore(path string) (*postStore, error) {
  ); CREATE TABLE IF NOT EXISTS contact_submissions (
   ip TEXT NOT NULL, attempted_at INTEGER NOT NULL
  ); CREATE INDEX IF NOT EXISTS contact_submissions_ip_attempted_at ON contact_submissions(ip, attempted_at
+ ); CREATE TABLE IF NOT EXISTS comments (
+  id INTEGER PRIMARY KEY, post_slug TEXT NOT NULL REFERENCES posts(slug) ON UPDATE CASCADE ON DELETE CASCADE,
+  ip TEXT NOT NULL, body TEXT NOT NULL, created_at INTEGER NOT NULL, UNIQUE(post_slug, ip)
+ ); CREATE INDEX IF NOT EXISTS comments_post_created_at ON comments(post_slug, created_at, id
  ); CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);`); err != nil {
 		db.Close()
 		return nil, err
@@ -301,13 +311,36 @@ func (s *postStore) get(slug string) (article, error) {
 	return a, err
 }
 func (s *postStore) save(a article, existingSlug string) (string, error) {
+	requested := a.Slug
 	if existingSlug != "" {
-		_, err := s.db.Exec(`UPDATE posts SET title=?,tags=?,summary=?,markdown=?,read_time=?,image=?,published=?,updated_at=? WHERE slug=?`, a.Title, a.Tags, a.Summary, a.Markdown, readTime(a.Markdown), a.Image, a.Published, time.Now().UTC().Format(time.RFC3339Nano), existingSlug)
-		return existingSlug, err
+		if requested == "" {
+			requested = existingSlug
+		}
+		if !validArticleSlug(requested) {
+			return "", errors.New("invalid article URL")
+		}
+		_, err := s.db.Exec(`UPDATE posts SET slug=?,title=?,tags=?,summary=?,markdown=?,read_time=?,image=?,published=?,updated_at=? WHERE slug=?`, requested, a.Title, a.Tags, a.Summary, a.Markdown, readTime(a.Markdown), a.Image, a.Published, time.Now().UTC().Format(time.RFC3339Nano), existingSlug)
+		if err != nil && requested != existingSlug {
+			var count int
+			if checkErr := s.db.QueryRow(`SELECT COUNT(*) FROM posts WHERE slug=?`, requested).Scan(&count); checkErr == nil && count > 0 {
+				return "", errSlugTaken
+			}
+		}
+		return requested, err
 	}
 	base := slugify(a.Title)
+	if requested != "" {
+		if !validArticleSlug(requested) {
+			return "", errors.New("invalid article URL")
+		}
+		base = requested
+	}
 	stamp := time.Now().UTC().Format(time.RFC3339Nano)
-	for n := 1; n <= 1000; n++ {
+	limit := 1000
+	if requested != "" {
+		limit = 1
+	}
+	for n := 1; n <= limit; n++ {
 		slug := base
 		if n > 1 {
 			slug = fmt.Sprintf("%s-%d", base, n)
@@ -321,8 +354,13 @@ func (s *postStore) save(a article, existingSlug string) (string, error) {
 			return "", err
 		}
 	}
+	if requested != "" {
+		return "", errSlugTaken
+	}
 	return "", errors.New("could not find a free slug")
 }
+
+func validArticleSlug(slug string) bool { return len(slug) <= 70 && validSlug.MatchString(slug) }
 
 func (s *postStore) delete(slug string) (bool, error) {
 	result, err := s.db.Exec(`DELETE FROM posts WHERE slug=?`, slug)

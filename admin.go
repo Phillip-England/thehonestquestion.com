@@ -29,6 +29,7 @@ type adminPageData struct {
 	Posts     []article
 	Post      article
 	Editing   bool
+	EditSlug  string
 	Error     string
 	CSRF      string
 	LoginCSRF string
@@ -347,10 +348,10 @@ func (s *server) editPostPage(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	s.renderAdmin(w, "editor", adminPageData{Title: "Edit post", Post: a, Editing: true, CSRF: csrf})
+	s.renderAdmin(w, "editor", adminPageData{Title: "Edit post", Post: a, Editing: true, EditSlug: a.Slug, CSRF: csrf})
 }
 func parsePostForm(r *http.Request) article {
-	return article{Title: strings.TrimSpace(r.PostFormValue("title")), Tags: strings.TrimSpace(r.PostFormValue("tags")), Summary: strings.TrimSpace(r.PostFormValue("summary")), Markdown: strings.TrimSpace(r.PostFormValue("markdown")), Published: r.PostFormValue("published") == "1"}
+	return article{Slug: strings.TrimSpace(r.PostFormValue("slug")), Title: strings.TrimSpace(r.PostFormValue("title")), Tags: strings.TrimSpace(r.PostFormValue("tags")), Summary: strings.TrimSpace(r.PostFormValue("summary")), Markdown: strings.TrimSpace(r.PostFormValue("markdown")), Published: r.PostFormValue("published") == "1"}
 }
 func validPost(a article) bool {
 	return len([]rune(a.Title)) >= 3 && len([]rune(a.Title)) <= 160 && len([]rune(a.Tags)) <= 320 && a.Tags != "" && len([]rune(a.Summary)) <= 400 && a.Summary != "" && len([]rune(a.Markdown)) <= 50000 && a.Markdown != ""
@@ -384,11 +385,17 @@ func (s *server) savePost(w http.ResponseWriter, r *http.Request, existing strin
 		}
 	}
 	a := parsePostForm(r)
-	a.Slug = existing
+	if a.Slug == "" && existing != "" {
+		a.Slug = existing
+	}
 	a.Image = previous.Image
 	tags, validTags := normalizeTags(a.Tags)
 	if !validPost(a) || !validTags {
-		s.renderAdmin(w, "editor", adminPageData{Title: "Edit post", Post: a, Editing: existing != "", CSRF: csrf, Error: "Add a title, summary, Markdown body, and up to 10 hashtags such as #faith #questions."})
+		s.renderAdmin(w, "editor", adminPageData{Title: "Edit post", Post: a, Editing: existing != "", EditSlug: existing, CSRF: csrf, Error: "Add a title, summary, Markdown body, and up to 10 hashtags such as #faith #questions."})
+		return
+	}
+	if a.Slug != "" && !validArticleSlug(a.Slug) {
+		s.renderAdmin(w, "editor", adminPageData{Title: "Edit post", Post: a, Editing: existing != "", EditSlug: existing, CSRF: csrf, Error: "Use a URL of up to 70 lowercase letters, numbers, and single hyphens."})
 		return
 	}
 	a.Tags = tags
@@ -411,7 +418,7 @@ func (s *server) savePost(w http.ResponseWriter, r *http.Request, existing strin
 		newImage, uploadErr = s.saveImage(file, originalName)
 		file.Close()
 		if uploadErr != nil {
-			s.renderAdmin(w, "editor", adminPageData{Title: "Edit post", Post: a, Editing: existing != "", CSRF: csrf, Error: "Could not process that image. Try a JPG, PNG, WebP, GIF, or HEIC image. The maximum size is 20 MB."})
+			s.renderAdmin(w, "editor", adminPageData{Title: "Edit post", Post: a, Editing: existing != "", EditSlug: existing, CSRF: csrf, Error: "Could not process that image. Try a JPG, PNG, WebP, GIF, or HEIC image. The maximum size is 20 MB."})
 			return
 		}
 		a.Image = newImage
@@ -424,6 +431,10 @@ func (s *server) savePost(w http.ResponseWriter, r *http.Request, existing strin
 			if removeErr := s.removeImage(newImage); removeErr != nil {
 				log.Printf("remove unsaved image: %v", removeErr)
 			}
+		}
+		if errors.Is(err, errSlugTaken) {
+			s.renderAdmin(w, "editor", adminPageData{Title: "Edit post", Post: a, Editing: existing != "", EditSlug: existing, CSRF: csrf, Error: "That article URL is already in use."})
+			return
 		}
 		http.Error(w, "Could not save post", 500)
 		return
